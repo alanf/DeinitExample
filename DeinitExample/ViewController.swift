@@ -45,3 +45,87 @@ class ViewController: UIViewController {
     }
 }
 
+
+
+/// Schedules a timer on a queue when the view is loaded.
+/// Also logs when deinit is invoked
+class ViewControllerBase: UIViewController {
+    let timer:DispatchSourceTimer = DispatchSource.makeTimerSource(flags: [], queue:  DispatchQueue(label: "q.q"))
+    
+    deinit {
+        NSLog("deinit of \(NSStringFromClass(type(of: self)))")
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        timer.scheduleRepeating(deadline: .now(), interval: .seconds(1))
+    }
+}
+
+/// SUBTLE MEMORY LEAK ILLUSTRATED
+/// Which of the following `ViewController`s:
+/// - Is retained for a long time (would leak memory if )?
+/// - Compiles with an error?
+/// - Is correct?
+
+class ViewControllerA: ViewControllerBase {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        timer.setEventHandler {
+            UIView.animate(withDuration: 0.2) {
+                self.view.backgroundColor = UIColor.green
+            }
+        }
+    }
+}
+
+class ViewControllerB: ViewControllerBase {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        timer.setEventHandler {
+            UIView.animate(withDuration: 0.2) {
+                NSLog("Hello")
+            }
+        }
+    }
+}
+
+class ViewControllerC: ViewControllerBase {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        timer.setEventHandler {
+            UIView.animate(withDuration: 0.2) { [weak self] in
+                NSLog("Hello")
+            }
+        }
+    }
+}
+
+class ViewControllerD: ViewControllerBase {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        timer.setEventHandler { [weak self] in
+            UIView.animate(withDuration: 0.2) {
+                self?.view.backgroundColor = UIColor.green
+            }
+        }
+    }
+}
+
+class ViewControllerE: ViewControllerBase {
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        timer.setEventHandler {
+            UIView.animate(withDuration: 0.2) { [weak self] in
+                self?.view.backgroundColor = UIColor.green
+            }
+        }
+    }
+}
+
